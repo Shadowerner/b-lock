@@ -75,7 +75,7 @@ function layout(){
   drag=null;
   particles=[];
 }
-function start(){game=new MonolitheEngine();mode='play';drag=null;particles=[];flashes=[];notice=null;finish=0;['menu','settings','end'].forEach(function(id){show(id,false)});show('options',true);wake();loadSounds().catch(function(){});showBanner()}
+function start(){game=new MonolitheEngine();mode='play';drag=null;particles=[];flashes=[];notice=null;finish=0;['menu','settings','end'].forEach(function(id){show(id,false)});show('options',true);wake();loadSounds().catch(function(){});setTimeout(function(){showBanner()},800)}
 function openSettings(){if(mode==='settings')return;previous=mode;mode='settings';drag=null;show('settings',true);$('restart').disabled=!game;wake();loadSounds().catch(function(){});hideBanner()}
 function closeSettings(){show('settings',false);mode=previous;wake()}
 $('play').onclick=function(){startMusic();start()};$('again').onclick=function(){startMusic();start()};$('restart').onclick=start;$('options').onclick=openSettings;$('menuOptions').onclick=openSettings;$('resume').onclick=closeSettings;$('home').onclick=function(){mode='menu';show('end',false);show('options',false);show('menu',true);$('menuBest').textContent=best;hideBanner()};
@@ -119,12 +119,21 @@ await Promise.all(Object.keys(wanted).map(async function(k){if(samples[k])return
 function effect(k){if(k==='invalid'||!ac||!samples[k]||!$('audioOn').checked)return;try{var s=ac.createBufferSource(),g=ac.createGain();s.buffer=samples[k];if(k==='clear'){var endFilter=ac.createBiquadFilter();endFilter.type='lowpass';endFilter.frequency.value=3600;endFilter.Q.value=.4;var startTime=ac.currentTime,len=Math.min(.16,s.buffer.duration);s.playbackRate.value=1;g.gain.setValueAtTime(0,startTime);g.gain.linearRampToValueAtTime(.48,startTime+.002);g.gain.exponentialRampToValueAtTime(.0001,startTime+len);s.connect(endFilter).connect(g).connect(sfxGain);s.start(startTime,0);s.stop(startTime+len+.003);s.onended=function(){s.disconnect();endFilter.disconnect();g.disconnect()};return}var filter=ac.createBiquadFilter();filter.type='lowpass';filter.frequency.value=k==='pick'?3200:2400;filter.Q.value=.35;var duration=Math.min(s.buffer.duration,k==='pick'?.038:.085);if(duration<=.004)return;var time=ac.currentTime,level=k==='pick'?.20:.40;s.playbackRate.value=1;g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(level,time+.0015);g.gain.exponentialRampToValueAtTime(.0001,time+duration);s.connect(filter).connect(g).connect(sfxGain);s.start(time,0);s.stop(time+duration+.003);s.onended=function(){s.disconnect();filter.disconnect();g.disconnect()}}catch(e){} }
 
 // Publicité facultative AdMob
-var adPlugin=null,adReady=false,adLoading=false,bannerShown=false;
+var adPlugin=null,adReady=false,adLoading=false,bannerShown=false,adInitialized=false;
 function initAd(){
   if(adPlugin)return adPlugin;
   if(!window.Capacitor||!Capacitor.Plugins||!Capacitor.Plugins.AdMob)return null;
   adPlugin=Capacitor.Plugins.AdMob;
   return adPlugin;
+}
+async function initAdMob(){
+  var p=initAd();
+  if(!p)return null;
+  if(!adInitialized){
+    await p.initialize();
+    adInitialized=true;
+  }
+  return p;
 }
 async function prepareAd(){
   var p=initAd();
@@ -133,7 +142,7 @@ async function prepareAd(){
   if(adLoading)return false;
   adLoading=true;
   try{
-    await p.initialize();
+    await initAdMob();
     await p.prepareRewardVideoAd({adId:'ca-app-pub-4074481395259436/7358677773'});
     adReady=true;
     $('adStatus').textContent='Publicité prête.';
@@ -160,25 +169,13 @@ $('supportAd').onclick=async function(){
 };
 if(!initAd()){$('supportAd').style.display='none'}
 
-var adInitialized=false;
-
-async function initAdMob(){
-  var p=initAd();
-  if(!p)return null;
-  if(!adInitialized){
-    await p.initialize();
-    adInitialized=true;
-  }
-  return p;
-}
-
 async function showBanner(){
   try{
     var p=await initAdMob();
     if(!p)return;
     await p.showBanner({
       adId:'ca-app-pub-4074481395259436/3758470424',
-      adSize:'ADAPTIVE_BANNER',
+      adSize:'BANNER',
       position:'BOTTOM_CENTER',
       margin:0
     });
@@ -186,6 +183,13 @@ async function showBanner(){
   }catch(e){
     bannerShown=false;
   }
+}
+
+async function hideBanner(){
+  var p=initAd();
+  if(!p||!bannerShown)return;
+  try{await p.hideBanner();}catch(e){}
+  bannerShown=false;
 }
 
 document.addEventListener('visibilitychange',function(){drag=null;volume();if(!document.hidden&&ac){next=ac.currentTime+.1;wake()}});window.addEventListener('keydown',function(e){if(e.key==='Escape'){if(mode==='settings')closeSettings();else if(mode==='play')openSettings()}});window.addEventListener('resize',layout);layout();requestAnimationFrame(frame);$('ready').textContent='Prêt · glisser-déposer tactile et souris.';
