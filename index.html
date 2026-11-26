@@ -20,7 +20,7 @@
 .credit{font-size:10px;letter-spacing:2px;color:#5f5f5f;text-align:center;margin:22px 0 0}</style><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="B-LOCK"><link rel="apple-touch-icon" href="icon-192.png"></head><body><audio id="bgm" loop preload="auto" playsinline><source src="https://cdn.pixabay.com/download/audio/2021/08/27/audio_eda412aad4.mp3?filename=slow-boat-meditation-7744.mp3" type="audio/mpeg"></audio><canvas id="board" aria-label="Jeu de blocs, glisser les pièces dans la grille"></canvas><button id="options" class="hidden">OPTIONS</button>
 <div id="menu" class="overlay"><section class="home"><div class="home-top"><h1 class="logo">B-LOCK</h1></div><div class="home-mid"><div class="home-grid" aria-hidden="true"><i class="on"></i><i></i><i class="on"></i><i></i><i></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i></div><div class="record"><span>MEILLEUR SCORE</span><strong id="menuBest">0</strong></div></div><div class="home-actions"><button id="play" class="wide primary">JOUER</button><button id="menuOptions" class="wide">RÉGLAGES</button><p id="ready" class="hidden"></p></div></section></div>
 
-<div id="settings" class="overlay hidden"><section class="panel"><h2>RÉGLAGES</h2><label>Musique<input id="music" type="range" min="0" max="100" value="24"></label><p id="musicName" class="hidden"></p><label>Effets<input id="sfx" type="range" min="0" max="100" value="50"></label><label>Audio<input id="audioOn" type="checkbox" checked></label><p id="audioStatus" class="hidden"></p><button id="resume" class="wide">RETOUR</button><button id="restart" class="wide">RECOMMENCER LA PARTIE</button><p class="credit">© shadowfighter</p></section></div>
+<div id="settings" class="overlay hidden"><section class="panel"><h2>RÉGLAGES</h2><label>Musique<input id="music" type="range" min="0" max="100" value="24"></label><p id="musicName" class="hidden"></p><label>Effets<input id="sfx" type="range" min="0" max="100" value="50"></label><label>Audio<input id="audioOn" type="checkbox" checked></label><p id="audioStatus" class="hidden"></p><button id="resume" class="wide">RETOUR</button><button id="restart" class="wide">RECOMMENCER LA PARTIE</button><button id="supportAd" class="wide">REGARDER UNE PUB POUR SOUTENIR</button><p id="adStatus" class="small"></p><p class="credit">© shadowfighter</p></section></div>
 <div id="end" class="overlay hidden"><section class="panel"><h2>PARTIE TERMINÉE</h2><p id="endScore">0</p><button id="again" class="wide">REJOUER</button><button id="home" class="wide">MENU</button></section></div><div id="error" class="hidden"></div><script id="soundData" type="application/json">{}</script><script>var MonolitheEngine=(function(){
 'use strict';
 var SHAPES=[[[1]],[[1,1]],[[1],[1]],[[1,1,1]],[[1],[1],[1]],[[1,1,1,1]],[[1],[1],[1],[1]],[[1,1],[1,1]],[[1,1,1],[1,1,1]],[[1,1],[1,1],[1,1]],[[1,1,1],[1,1,1],[1,1,1]],[[1,0],[1,1]],[[0,1],[1,1]],[[1,1],[1,0]],[[1,1],[0,1]],[[1,1,1],[0,1,0]],[[0,1],[1,1],[0,1]],[[1,0],[1,1],[1,0]],[[1,1,1],[1,0,0]],[[1,1,1],[0,0,1]],[[1,1,0],[0,1,1]],[[0,1,1],[1,1,0]]];
@@ -85,6 +85,49 @@ function status(){var n=Object.keys(samples).length;$('audioStatus').textContent
 async function loadSounds(){if(!ac)return;if(soundLoad)return soundLoad;soundLoad=(async function(){try{$('audioStatus').textContent='Chargement des vrais fichiers audio…';var catalog=null;var needs=Object.keys(wanted).some(function(k){return !raw[k]&&!samples[k]});if(needs){try{catalog=await discover()}catch(e){}}
 await Promise.all(Object.keys(wanted).map(async function(k){if(samples[k])return;try{var arr;if(raw[k])arr=Uint8Array.from(atob(raw[k]),function(c){return c.charCodeAt(0)}).buffer;else if(physicalUrls[k]){arr=await fetchData(physicalUrls[k],false)}else{if(!catalog)return;var filename=wanted[k].toLowerCase();var entry=catalog.tree.find(function(e){return e.type==='blob'&&e.path.toLowerCase().split('/').pop()===filename});if(!entry){var ogg=filename.replace('.wav','.ogg');entry=catalog.tree.find(function(e){return e.type==='blob'&&e.path.toLowerCase().split('/').pop()===ogg})}if(!entry)return;var path=entry.path.split('/').map(encodeURIComponent).join('/');arr=await fetchData('https://raw.githubusercontent.com/Calinou/kenney-interface-sounds/'+encodeURIComponent(catalog.branch)+'/'+path,false)}samples[k]=await ac.decodeAudioData(arr.slice(0));if(!raw[k]){var bytes=new Uint8Array(arr),text='';for(var i=0;i<bytes.length;i+=8192)text+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));raw[k]=btoa(text)}}catch(e){}}));status()}catch(e){status()}})();try{await soundLoad}finally{soundLoad=null}}
 function effect(k){if(k==='invalid'||!ac||!samples[k]||!$('audioOn').checked)return;try{var s=ac.createBufferSource(),g=ac.createGain();s.buffer=samples[k];if(k==='clear'){var endFilter=ac.createBiquadFilter();endFilter.type='lowpass';endFilter.frequency.value=3600;endFilter.Q.value=.4;var startTime=ac.currentTime,len=Math.min(.16,s.buffer.duration);s.playbackRate.value=1;g.gain.setValueAtTime(0,startTime);g.gain.linearRampToValueAtTime(.48,startTime+.002);g.gain.exponentialRampToValueAtTime(.0001,startTime+len);s.connect(endFilter).connect(g).connect(sfxGain);s.start(startTime,0);s.stop(startTime+len+.003);s.onended=function(){s.disconnect();endFilter.disconnect();g.disconnect()};return}var filter=ac.createBiquadFilter();filter.type='lowpass';filter.frequency.value=k==='pick'?3200:2400;filter.Q.value=.35;var duration=Math.min(s.buffer.duration,k==='pick'?.038:.085);if(duration<=.004)return;var time=ac.currentTime,level=k==='pick'?.20:.40;s.playbackRate.value=1;g.gain.setValueAtTime(0,time);g.gain.linearRampToValueAtTime(level,time+.0015);g.gain.exponentialRampToValueAtTime(.0001,time+duration);s.connect(filter).connect(g).connect(sfxGain);s.start(time,0);s.stop(time+duration+.003);s.onended=function(){s.disconnect();filter.disconnect();g.disconnect()}}catch(e){} }
+
+// Publicité facultative AdMob
+var adPlugin=null,adReady=false,adLoading=false;
+function initAd(){
+  if(adPlugin)return adPlugin;
+  if(!window.Capacitor||!Capacitor.Plugins||!Capacitor.Plugins.AdMob)return null;
+  adPlugin=Capacitor.Plugins.AdMob;
+  return adPlugin;
+}
+async function prepareAd(){
+  var p=initAd();
+  if(!p){$('adStatus').textContent='Publicité disponible uniquement dans l’application Android.';return false}
+  if(adReady)return true;
+  if(adLoading)return false;
+  adLoading=true;
+  try{
+    await p.initialize();
+    await p.prepareRewardVideoAd({adId:'ca-app-pub-4074481395259436/7358677773'});
+    adReady=true;
+    $('adStatus').textContent='Publicité prête.';
+    return true;
+  }catch(e){
+    adReady=false;
+    $('adStatus').textContent='Publicité indisponible pour le moment.';
+    return false;
+  }finally{adLoading=false}
+}
+$('supportAd').onclick=async function(){
+  var p=initAd();
+  if(!p){$('adStatus').textContent='Publicité disponible uniquement dans l’application Android.';return}
+  $('supportAd').disabled=true;
+  try{
+    if(!adReady){var ok=await prepareAd();if(!ok)return}
+    await p.showRewardVideoAd();
+    adReady=false;
+    $('adStatus').textContent='Merci pour votre soutien.';
+  }catch(e){
+    adReady=false;
+    $('adStatus').textContent='Publicité indisponible pour le moment.';
+  }finally{$('supportAd').disabled=false}
+};
+if(!initAd()){$('supportAd').style.display='none'}
+
 document.addEventListener('visibilitychange',function(){drag=null;volume();if(!document.hidden&&ac){next=ac.currentTime+.1;wake()}});window.addEventListener('keydown',function(e){if(e.key==='Escape'){if(mode==='settings')closeSettings();else if(mode==='play')openSettings()}});window.addEventListener('resize',layout);layout();requestAnimationFrame(frame);$('ready').textContent='Prêt · glisser-déposer tactile et souris.';
 }catch(e){report(e.message)}
 })();</script><noscript><p>JavaScript est désactivé dans ce lecteur. Ouvrez le fichier dans un navigateur.</p></noscript></body></html>
