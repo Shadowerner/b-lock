@@ -21,7 +21,11 @@ jobs:
           cp index.html icon-192.png icon-512.png b-lock-icone.png www/
           cp icon-only.png icon-foreground.png icon-background.png assets/
       - run: npm install
+      - run: npm install @capacitor-community/admob
       - run: npx cap add android
+      - name: Configurer AdMob
+        run: |
+          sed -i 's|</application>|<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-4074481395259436~1176412806"/></application>|' android/app/src/main/AndroidManifest.xml
       - run: npx capacitor-assets generate --android
       - run: npx cap sync android
       - name: Compiler l APK
