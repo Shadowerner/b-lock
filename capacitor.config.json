@@ -1,0 +1,9 @@
+{
+  "appId": "com.shadowfighter.block",
+  "appName": "B-LOCK",
+  "webDir": "www",
+  "backgroundColor": "#0b0b0b",
+  "android": {
+    "backgroundColor": "#0b0b0b"
+  }
+}
