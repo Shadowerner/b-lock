@@ -126,7 +126,7 @@ $('supportAd').onclick=async function(){
     $('adStatus').textContent='Publicité indisponible pour le moment.';
   }finally{$('supportAd').disabled=false}
 };
-if(!initAd()){$('supportAd').style.display='none'}
+if(!initAd()){$('adStatus').textContent='Publicité indisponible dans cette version.'}
 
 document.addEventListener('visibilitychange',function(){drag=null;volume();if(!document.hidden&&ac){next=ac.currentTime+.1;wake()}});window.addEventListener('keydown',function(e){if(e.key==='Escape'){if(mode==='settings')closeSettings();else if(mode==='play')openSettings()}});window.addEventListener('resize',layout);layout();requestAnimationFrame(frame);$('ready').textContent='Prêt · glisser-déposer tactile et souris.';
 }catch(e){report(e.message)}
